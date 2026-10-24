@@ -139,9 +139,12 @@ class ReleaseAuthTest(unittest.TestCase):
         for status in ("awaiting_z2", "withdrawn", "superseded"):
             self.ops.file(self.release(), status=status)
             self.assertIn("not 'ratified'", self.errors(), status)
-        self.ops.file(self.release(), extra=[{"q_id": "Q-NEXT", "supersedes": Q_ID}])
-        self.assertIn("superseded by", self.errors())
+        for form in (Q_ID, f"Q-OTHER, {Q_ID}", f"Q-OTHER,{Q_ID}", ["Q-OTHER", Q_ID]):
+            self.ops.file(self.release(), extra=[{"q_id": "Q-NEXT", "supersedes": form}])
+            self.assertIn("superseded by", self.errors(), form)
         self.assert_no_bundle()
+        self.ops.file(self.release(), extra=[{"q_id": "Q-NEXT", "supersedes": [f"{Q_ID}-2"]}])
+        self.assertNotIn("superseded by", self.errors())  # no prefix match
 
     def test_unlisted_ratifier(self):
         self.ops.file(self.release(), by="Mallory")

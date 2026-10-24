@@ -126,6 +126,23 @@ end $$;
 create trigger publication_versions_immutable before update or delete on publication_versions
   for each row execute function forbid_published_version_edit();
 
+-- Artifacts of a published version are frozen with it: no insert, update
+-- or delete, and no moving an artifact into or out of a published version.
+create function forbid_released_artifact_edit() returns trigger language plpgsql as $$
+begin
+  if (tg_op in ('UPDATE', 'DELETE') and exists (
+        select 1 from publication_versions v
+        where v.id = old.publication_version_id and v.released_at is not null))
+     or (tg_op in ('INSERT', 'UPDATE') and exists (
+        select 1 from publication_versions v
+        where v.id = new.publication_version_id and v.released_at is not null)) then
+    raise exception 'artifact belongs to a published version; add a correcting version instead';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end $$;
+create trigger release_artifacts_immutable before insert or update or delete on release_artifacts
+  for each row execute function forbid_released_artifact_edit();
+
 -- Row level security: the public may read published catalog rows only.
 -- Writes go through the service role from CI / workers, which bypasses RLS.
 alter table publications          enable row level security;
