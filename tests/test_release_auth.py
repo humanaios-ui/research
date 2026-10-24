@@ -82,6 +82,13 @@ class ReleaseAuthTest(unittest.TestCase):
     def set_pubs(self, pubs):
         self.repo.write("registry/publications.json", json.dumps({"publications": pubs}).encode())
 
+    def commit_pubs(self, pubs):
+        """Registry change that is part of the released commit."""
+        self.set_pubs(pubs)
+        self.repo.commit("registry change")
+        self.commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.repo.root,
+                                     capture_output=True, text=True).stdout.strip()
+
     def release(self, **over):
         files = [{"path": p, "sha256": sha((self.repo.root / p).read_bytes())}
                  for p in (DATA, LICENSE)]
@@ -201,7 +208,7 @@ class ReleaseAuthTest(unittest.TestCase):
     # --- registry and rights ---
 
     def test_duplicate_registry_entries(self):
-        self.set_pubs([self.pub, dict(self.pub)])
+        self.commit_pubs([self.pub, dict(self.pub)])
         self.ops.file(self.release())
         errs = self.errors()
         self.assertIn("duplicate release_tag", errs)
@@ -245,9 +252,20 @@ class ReleaseAuthTest(unittest.TestCase):
         self.repo.commit("later commit restores rights")
         assert_refused()
 
+    def test_publication_metadata_is_read_at_the_released_commit(self):
+        self.ops.file(self.release())
+        # A later, uncommitted edit must not reach the manifest or the checks.
+        self.set_pubs([dict(self.pub, title="Edited later", scope="")])
+        self.assertEqual(self.errors(), "")
+        out = Path(tempfile.mkdtemp())
+        brm.build(self.repo.root, TAG, out / "dist", out / "notes", self.ops.root,
+                  commit=self.commit)
+        m = json.loads((out / "dist/manifest.json").read_text())
+        self.assertEqual(m["publication"]["title"], "Acme")
+
     def test_missing_scope_and_limitations(self):
         pub = {k: v for k, v in self.pub.items() if k not in ("scope", "limitations")}
-        self.set_pubs([pub])
+        self.commit_pubs([pub])
         self.ops.file(self.release())
         errs = self.errors()
         self.assertIn("missing scope", errs)

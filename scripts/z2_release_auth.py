@@ -75,6 +75,12 @@ def safe_path(path: str) -> bool:
     return posixpath.normpath(path) == path and not path.startswith("../") and path != ".."
 
 
+def publications_at(research_root: Path, commit: str):
+    """registry/publications.json entries at `commit`, or None if untracked."""
+    raw = git_bytes(research_root, commit, "registry/publications.json")
+    return None if raw is None else json.loads(raw).get("publications") or []
+
+
 def dataset_rights_errors(research_root: Path, commit: str, approved) -> list:
     """Rights are a release blocker: every approved dataset file needs a
     license file in the same release and a rights/consent reference, read

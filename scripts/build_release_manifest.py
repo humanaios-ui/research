@@ -74,14 +74,15 @@ def deterministic_tar_gz(blobs) -> bytes:
 
 def build(root: Path, tag: str, out: Path, notes_dir: Path, operations: Path,
           commit: str = "HEAD") -> dict:
-    pubs = json.loads((root / "registry/publications.json").read_text())["publications"]
-    match = [p for p in pubs if p.get("release_tag") == tag]
-    if len(match) != 1:
-        raise SystemExit(f"tag {tag}: expected one entry in registry/publications.json, "
-                         f"found {len(match)}")
-    pub = match[0]
     commit = subprocess.run(["git", "rev-parse", f"{commit}^{{commit}}"], cwd=root, check=True,
                             capture_output=True, text=True).stdout.strip()
+    # Metadata comes from the released commit, never the working tree.
+    pubs = z2_release_auth.publications_at(root, commit) or []
+    match = [p for p in pubs if p.get("release_tag") == tag]
+    if len(match) != 1:
+        raise SystemExit(f"tag {tag}: expected one entry in registry/publications.json "
+                         f"at {commit[:12]}, found {len(match)}")
+    pub = match[0]
     errors, files = z2_release_auth.verify(Path(operations), str(pub.get("z2_q_id")),
                                            tag, commit, root)
     errors = errors or z2_release_auth.dataset_rights_errors(root, commit, files)
