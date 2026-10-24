@@ -492,16 +492,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 5546,
+      "bytes": 5721,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "c5ff1d632cecd1d310cf4ef7f3cc5a774f899700",
+      "git_blob_sha": "c2cfbebb3673fd4d532f52c1416afeced074b0b5",
       "inventory_id": "git:tests/test_release_rehearsal.py",
       "kind": "file",
       "lifecycle": "active",
       "name": "test_release_rehearsal.py",
       "path": "tests/test_release_rehearsal.py",
-      "sha256": "0c990ff62ddefd205b0c3481c7eb8f328a8e7ded5bfa284f6d738959b579715b",
+      "sha256": "6de625b0f86193096cd312cba586b0f5f90366cbb8a163e6a9623b0f0f033887",
       "source_system": "github"
     }
   ],
