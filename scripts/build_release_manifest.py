@@ -84,6 +84,7 @@ def build(root: Path, tag: str, out: Path, notes_dir: Path, operations: Path,
                             capture_output=True, text=True).stdout.strip()
     errors, files = z2_release_auth.verify(Path(operations), str(pub.get("z2_q_id")),
                                            tag, commit, root)
+    errors = errors or z2_release_auth.dataset_rights_errors(root, commit, files)
     if errors:
         raise SystemExit("not authorized:\n  " + "\n  ".join(errors))
     blobs = [(f, z2_release_auth.git_bytes(root, commit, f)) for f in files]

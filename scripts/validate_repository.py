@@ -178,22 +178,8 @@ def check_release(root: Path, tag: str, operations, commit: str, rep: Report):
                                               tag, commit, root)
     for e in errors:
         rep.error(f"tag {tag}: {e}")
-    # Rights are a release blocker: any approved dataset file needs a license
-    # file and a rights/consent reference in the registry.
-    datasets = {d["path"]: d for d in
-                json.loads((root / "registry/datasets.json").read_text())["datasets"]}
-    for path in approved:
-        if path.startswith("datasets/") and Path(path).name not in ("README.md", "LICENSE"):
-            ds = datasets.get(path)
-            if not ds:
-                rep.error(f"tag {tag}: {path} is not registered")
-                continue
-            lic = ds.get("license_file")
-            if not lic or lic not in approved:
-                rep.error(f"tag {tag}: dataset {ds['id']} has no license file in the release")
-            if not ds.get("rights_ref"):
-                rep.error(f"tag {tag}: dataset {ds['id']} has no rights/consent reference")
-
+    for e in z2_release_auth.dataset_rights_errors(root, commit, approved):
+        rep.error(f"tag {tag}: {e}")
 
 def run(root: Path, base=None, release=None, operations=None, commit="HEAD") -> Report:
     rep = Report()

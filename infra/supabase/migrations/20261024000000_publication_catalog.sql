@@ -130,6 +130,16 @@ create trigger publication_versions_immutable before update or delete on publica
 -- or delete, and no moving an artifact into or out of a published version.
 create function forbid_released_artifact_edit() returns trigger language plpgsql as $$
 begin
+  -- Lock the parent version row(s) first, in id order, so a concurrent
+  -- release (UPDATE of released_at) cannot commit between this check and
+  -- the artifact write. FOR SHARE still lets artifacts of an unreleased
+  -- version be added in parallel; the checks below then run as new
+  -- statements and see a release that committed while we waited.
+  perform 1 from publication_versions v
+   where v.id in (case when tg_op <> 'INSERT' then old.publication_version_id end,
+                  case when tg_op <> 'DELETE' then new.publication_version_id end)
+   order by v.id
+   for share;
   if (tg_op in ('UPDATE', 'DELETE') and exists (
         select 1 from publication_versions v
         where v.id = old.publication_version_id and v.released_at is not null))
