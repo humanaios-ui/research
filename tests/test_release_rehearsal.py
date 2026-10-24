@@ -115,7 +115,9 @@ class DriftTest(unittest.TestCase):
         rr.git(research, "tag", "-f", rr.TAG)  # someone moves the tag
         st = rr.run(w)
         self.assertEqual(st["result"], "failed")
-        self.assertEqual(st["transitions"][-1]["state"], "tagged")
+        # Caught at the first gate: the Z2 check now reads the tag itself.
+        self.assertEqual(st["transitions"][-1]["state"], "approved_exact_sha")
+        self.assertIn("not the commit being released", st["transitions"][-1]["detail"])
         self.assertEqual(rr.summary(w)["releases"], [])
 
     def test_main_moving_on_after_start_does_not_break_resume(self):

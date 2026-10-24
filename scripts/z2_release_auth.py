@@ -106,8 +106,15 @@ def dataset_rights_errors(research_root: Path, commit: str, approved) -> list:
     return errors
 
 
+def tag_commit(research_root: Path, tag: str):
+    """Commit that refs/tags/<tag> points at in research_root, or None."""
+    r = subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}^{{commit}}"],
+                       cwd=research_root, capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
 def verify(operations_root: Path, q_id: str, tag: str, commit: str,
-           research_root: Path):
+           research_root: Path, require_tag: bool = False):
     """Return (errors, approved_files). approved_files is [] on any error."""
     errors = []
     try:
@@ -161,6 +168,15 @@ def verify(operations_root: Path, q_id: str, tag: str, commit: str,
     elif rel["git_commit"] != commit:
         errors.append(f"{q_id}: tag points at {commit[:12]}, approved commit is "
                       f"{rel['git_commit'][:12]}")
+
+    # The tag may not exist yet (validation runs before tagging), but if it
+    # does it must point at the approved commit; bundling requires it.
+    tagged = tag_commit(research_root, tag)
+    if tagged is None and require_tag:
+        errors.append(f"{q_id}: tag {tag} does not exist in this checkout")
+    elif tagged is not None and tagged != commit:
+        errors.append(f"{q_id}: tag {tag} points at {tagged[:12]}, not the commit being "
+                      f"released {commit[:12]}")
 
     files = rel.get("files")
     if not isinstance(files, list) or not files:

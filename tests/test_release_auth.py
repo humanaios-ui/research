@@ -101,6 +101,9 @@ class ReleaseAuthTest(unittest.TestCase):
         return " ".join(vr.run(self.repo.root, release=TAG,
                                operations=str(self.ops.root) if operations else None).errors)
 
+    def tag(self, commit=None):
+        git(self.repo.root, "tag", "-f", TAG, commit or self.commit)
+
     def assert_no_bundle(self):
         out = Path(tempfile.mkdtemp())
         with self.assertRaises(SystemExit):
@@ -112,6 +115,7 @@ class ReleaseAuthTest(unittest.TestCase):
     def test_ratified_exact_release_builds_reproducibly(self):
         z2_hash = self.ops.file(self.release())
         self.assertEqual(self.errors(), "")
+        self.tag()
         a, b = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
         for d in (a, b):
             brm.build(self.repo.root, TAG, d / "dist", d / "notes", self.ops.root)
@@ -235,6 +239,7 @@ class ReleaseAuthTest(unittest.TestCase):
         self.commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.repo.root,
                                      capture_output=True, text=True).stdout.strip()
         self.ops.file(self.release())
+        self.tag()
 
         def assert_refused():
             out = Path(tempfile.mkdtemp())
@@ -257,11 +262,30 @@ class ReleaseAuthTest(unittest.TestCase):
         # A later, uncommitted edit must not reach the manifest or the checks.
         self.set_pubs([dict(self.pub, title="Edited later", scope="")])
         self.assertEqual(self.errors(), "")
+        self.tag()
         out = Path(tempfile.mkdtemp())
         brm.build(self.repo.root, TAG, out / "dist", out / "notes", self.ops.root,
                   commit=self.commit)
         m = json.loads((out / "dist/manifest.json").read_text())
         self.assertEqual(m["publication"]["title"], "Acme")
+
+    def test_tag_must_point_at_the_released_commit(self):
+        self.ops.file(self.release())
+        out = Path(tempfile.mkdtemp())
+        with self.assertRaises(SystemExit) as cm:  # untagged: no bundle
+            brm.build(self.repo.root, TAG, out / "dist", out / "notes", self.ops.root,
+                      commit=self.commit)
+        self.assertIn(f"tag {TAG} does not exist", str(cm.exception))
+        self.repo.write("README.md", b"later\n")
+        self.repo.commit("later")
+        self.tag("HEAD")  # tag on a different commit than the approved one
+        errs = " ".join(vr.run(self.repo.root, release=TAG, operations=str(self.ops.root),
+                               commit=self.commit).errors)
+        self.assertIn("not the commit being released", errs)
+        with self.assertRaises(SystemExit):
+            brm.build(self.repo.root, TAG, out / "dist", out / "notes", self.ops.root,
+                      commit=self.commit)
+        self.assertFalse((out / "dist").exists())
 
     def test_missing_scope_and_limitations(self):
         pub = {k: v for k, v in self.pub.items() if k not in ("scope", "limitations")}
