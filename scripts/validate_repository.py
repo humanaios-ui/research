@@ -154,7 +154,10 @@ def check_release(root: Path, tag: str, operations, commit: str, rep: Report):
         rep.error(f"tag {tag}: must be paper-<slug>-vX.Y.Z or dataset-<slug>-vX.Y.Z")
         return
     kind, slug, version = m.groups()
-    pubs = json.loads((root / "registry/publications.json").read_text())["publications"]
+    pubs = z2_release_auth.publications_at(root, commit)
+    if pubs is None:
+        rep.error(f"tag {tag}: registry/publications.json is not tracked at {commit}")
+        return
     tags = [p.get("release_tag") for p in pubs]
     keys = [(p.get("kind"), p.get("slug"), p.get("version")) for p in pubs]
     for dup in sorted({t for t in tags if tags.count(t) > 1}):
