@@ -75,6 +75,31 @@ def safe_path(path: str) -> bool:
     return posixpath.normpath(path) == path and not path.startswith("../") and path != ".."
 
 
+def dataset_rights_errors(research_root: Path, commit: str, approved) -> list:
+    """Rights are a release blocker: every approved dataset file needs a
+    license file in the same release and a rights/consent reference, read
+    from registry/datasets.json at the released commit."""
+    raw = git_bytes(research_root, commit, "registry/datasets.json")
+    if raw is None:
+        return [f"registry/datasets.json is not tracked at {commit[:12]}"]
+    datasets = {d.get("path"): d for d in json.loads(raw).get("datasets") or []}
+    approved = set(approved)
+    errors = []
+    for path in sorted(approved):
+        if not path.startswith("datasets/") or posixpath.basename(path) in ("README.md", "LICENSE"):
+            continue
+        ds = datasets.get(path)
+        if not ds:
+            errors.append(f"{path} is not registered")
+            continue
+        lic = ds.get("license_file")
+        if not lic or lic not in approved:
+            errors.append(f"dataset {ds.get('id')} has no license file in the release")
+        if not ds.get("rights_ref"):
+            errors.append(f"dataset {ds.get('id')} has no rights/consent reference")
+    return errors
+
+
 def verify(operations_root: Path, q_id: str, tag: str, commit: str,
            research_root: Path):
     """Return (errors, approved_files). approved_files is [] on any error."""
