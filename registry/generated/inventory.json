@@ -464,16 +464,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 11094,
+      "bytes": 11961,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "05fe69e404fa16c78170f48893768ac915dc02b5",
+      "git_blob_sha": "40de50e09ae9c5be917e99b6b69ae02b521bc0f8",
       "inventory_id": "git:tests/test_release_auth.py",
       "kind": "file",
       "lifecycle": "active",
       "name": "test_release_auth.py",
       "path": "tests/test_release_auth.py",
-      "sha256": "f8621e5dfe92fcafb34b57845d207f171d8f416026eac5927898e3f3693ab415",
+      "sha256": "53eda57f95b6d9f9ecefb98ce881f86e2e923d0547b0d8dcaaa5ff3b2a33c2ea",
       "source_system": "github"
     }
   ],

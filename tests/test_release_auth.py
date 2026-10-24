@@ -221,12 +221,29 @@ class ReleaseAuthTest(unittest.TestCase):
         self.assert_no_bundle()  # the standalone builder refuses it too
 
     def test_rights_are_read_at_the_released_commit(self):
-        self.ops.file(self.release(files=[self.release()["files"][0]]))  # data only
-        out = Path(tempfile.mkdtemp())
-        with self.assertRaises(SystemExit) as cm:
-            brm.build(self.repo.root, TAG, out / "dist", out / "notes", self.ops.root)
-        self.assertIn("no license file in the release", str(cm.exception))
-        self.assertFalse((out / "dist").exists())
+        reg = json.loads((self.repo.root / "registry/datasets.json").read_text())
+        reg["datasets"][0]["rights_ref"] = None
+        self.repo.write("registry/datasets.json", json.dumps(reg).encode())
+        self.repo.commit("released commit lacks rights")
+        self.commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.repo.root,
+                                     capture_output=True, text=True).stdout.strip()
+        self.ops.file(self.release())
+
+        def assert_refused():
+            out = Path(tempfile.mkdtemp())
+            with self.assertRaises(SystemExit) as cm:
+                brm.build(self.repo.root, TAG, out / "dist", out / "notes", self.ops.root,
+                          commit=self.commit)
+            self.assertIn("no rights/consent reference", str(cm.exception))
+            self.assertFalse((out / "dist").exists())
+
+        # Rights restored only in the working tree, then in a later commit:
+        # the released commit must still be refused both times.
+        reg["datasets"][0]["rights_ref"] = "consent: fixture"
+        self.repo.write("registry/datasets.json", json.dumps(reg).encode())
+        assert_refused()
+        self.repo.commit("later commit restores rights")
+        assert_refused()
 
     def test_missing_scope_and_limitations(self):
         pub = {k: v for k, v in self.pub.items() if k not in ("scope", "limitations")}
