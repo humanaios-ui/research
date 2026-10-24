@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "datasets": [
+    {
+      "id": "acat-corpus-v2",
+      "slug": "acat-corpus",
+      "method_version": "v2",
+      "time_window": "2026q1",
+      "path": "datasets/acat_corpus_v2.csv",
+      "legacy_path": true,
+      "legacy_note": "Committed before the naming convention. Kept in place: moving a published file rewrites it. New snapshots use datasets/<slug>/<method-version>-<time-window>/.",
+      "media_type": "text/csv",
+      "rows": 604,
+      "columns": 28,
+      "sha256": "884ef1506e918b58757a154dfcd4394e1534ad511133b2e377b05d9df81a4237",
+      "license": "CC0-1.0",
+      "license_file": null,
+      "data_class": "public",
+      "lifecycle": "frozen"
+    }
+  ]
+}
