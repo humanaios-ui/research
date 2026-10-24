@@ -48,6 +48,16 @@ def signature(candidate_bytes: bytes, by: str, at: str, decision: str) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def id_list(value) -> list:
+    """`supersedes` as written in INDEX.yaml: a YAML list, or one string of
+    IDs separated by spaces or commas. Missing means none."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return [str(v).strip() for v in value if str(v).strip()]
+    return [t for t in re.split(r"[\s,]+", str(value)) if t]
+
+
 def load_index(operations_root: Path) -> dict:
     import yaml  # only the release path needs PyYAML
     return yaml.safe_load((operations_root / "z1-inbox" / "INDEX.yaml").read_text())
@@ -87,7 +97,7 @@ def verify(operations_root: Path, q_id: str, tag: str, commit: str,
     if not HEX64.match(z2_hash):
         errors.append(f"{q_id}: z2_hash is not a sha256")
     superseders = [x.get("q_id") for x in candidates
-                   if q_id in str(x.get("supersedes", "")).split()]
+                   if q_id in id_list(x.get("supersedes"))]
     if superseders:
         errors.append(f"{q_id}: superseded by {superseders}")
 

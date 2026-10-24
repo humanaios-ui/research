@@ -324,16 +324,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 7314,
+      "bytes": 8251,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "aecdc85a9817d04bd10b1eb41f9c1291de9b426d",
+      "git_blob_sha": "d57836f50409819bc0f1921f776a23428a570ef4",
       "inventory_id": "git:infra/supabase/migrations/20261024000000_publication_catalog.sql",
       "kind": "file",
       "lifecycle": "active",
       "name": "20261024000000_publication_catalog.sql",
       "path": "infra/supabase/migrations/20261024000000_publication_catalog.sql",
-      "sha256": "b551c0a4afb00808ed67ef752d9739e44103b59cd766cf879ed65a4091a20725",
+      "sha256": "a32c4c246356132f95f96f05bec1038af9254315ba6d050267df86d97397ebd4",
       "source_system": "github"
     },
     {
@@ -436,16 +436,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 6558,
+      "bytes": 6930,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "cf10f7f735504e6a465adcfa17e034966eccd111",
+      "git_blob_sha": "66743c9c20052ebea40ca298e3bb0a94cadb728a",
       "inventory_id": "git:scripts/z2_release_auth.py",
       "kind": "file",
       "lifecycle": "active",
       "name": "z2_release_auth.py",
       "path": "scripts/z2_release_auth.py",
-      "sha256": "3faec0b9f8597b056b11ed215898f2b9c97f03d0f7d4052bb5e2e9cfba0ce5b3",
+      "sha256": "938258b78472728e22a5339e57aeb53a8873b790624c1b4c105635b7cff3eb10",
       "source_system": "github"
     },
     {
@@ -478,16 +478,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 10093,
+      "bytes": 10364,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "0699211a376ec182a9be298a46ed4af41f7c5d19",
+      "git_blob_sha": "0f47d45e9f2f6a8a3a8209db250ddf60ed19a110",
       "inventory_id": "git:tests/test_release_auth.py",
       "kind": "file",
       "lifecycle": "active",
       "name": "test_release_auth.py",
       "path": "tests/test_release_auth.py",
-      "sha256": "68d7fa8872c1349b4a677c7a4e762b7060dbb81ff0479a57d2b974f8a16562fa",
+      "sha256": "cb2da337f159e381ac4d522102a37864bb3221fcf368413cc47a481265215554",
       "source_system": "github"
     },
     {
