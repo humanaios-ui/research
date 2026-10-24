@@ -6,6 +6,7 @@
       "slug": "acat-corpus",
       "method_version": "v2",
       "time_window": "2026q1",
+      "time_window_basis": "Observed, not declared: 517 of 604 rows have a parseable timestamp, spanning 2026-02-15 to 2026-03-29; 87 rows have none. Not equivalent to later ACAT corpora.",
       "path": "datasets/acat_corpus_v2.csv",
       "legacy_path": true,
       "legacy_note": "Committed before the naming convention. Kept in place: moving a published file rewrites it. New snapshots use datasets/<slug>/<method-version>-<time-window>/.",
@@ -14,7 +15,9 @@
       "columns": 28,
       "sha256": "884ef1506e918b58757a154dfcd4394e1534ad511133b2e377b05d9df81a4237",
       "license": "CC0-1.0",
+      "license_status": "unverified: intended per README; release blocked until license_file and rights_ref are set",
       "license_file": null,
+      "rights_ref": null,
       "data_class": "public",
       "lifecycle": "frozen"
     }

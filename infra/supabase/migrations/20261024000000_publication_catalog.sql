@@ -99,19 +99,21 @@ create table notifications (
   sent_at                 timestamptz
 );
 
--- Optimistic concurrency: a write must carry the version it read.
-create function bump_entity_version() returns trigger language plpgsql as $$
+-- Compare-and-set: every update must set entity_version to exactly the
+-- version it read plus one. Omitting the column (new = old) is rejected,
+-- like a stale write, so a writer cannot skip the check by accident.
+create function check_entity_version() returns trigger language plpgsql as $$
 begin
-  if new.entity_version <> old.entity_version then
-    raise exception 'stale write to % (have %, sent %)', old.id, old.entity_version, new.entity_version
+  if new.entity_version <> old.entity_version + 1 then
+    raise exception 'write to % must set entity_version = % (read-version + 1), sent %',
+      old.id, old.entity_version + 1, new.entity_version
       using errcode = '40001';
   end if;
-  new.entity_version := old.entity_version + 1;
   new.updated_at := now();
   return new;
 end $$;
 create trigger publications_version before update on publications
-  for each row execute function bump_entity_version();
+  for each row execute function check_entity_version();
 
 -- Published versions are immutable; a correction is a new row.
 create function forbid_published_version_edit() returns trigger language plpgsql as $$

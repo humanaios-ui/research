@@ -11,8 +11,8 @@ truth and holds governance (Z1 propose / Z2 ratify / Z3 execute).
 | Paper source, dataset manifests, methodology | Git (this repo) | Catalog DB |
 | Frozen datasets (small) | Git, registered in `registry/datasets.json` | Release assets |
 | Published artifacts (PDF, bundles) | GitHub Release on an immutable tag | Catalog DB |
-| Release approval | Z2 ratification hash in `registry/publications.json` | PR state |
-| Azure inventory | Azure Resource Graph | Sanitized snapshot in `registry/` |
+| Release approval | Z2 record in operations `z1-inbox/INDEX.yaml` | `z2_q_id` in `registry/publications.json` |
+| Azure inventory | Azure Resource Graph | Private output only, never this repo |
 | Secrets | GitHub Environments / cloud secret stores | Never committed |
 
 Database backups are operational recovery. **Tag + release asset + checksum is
@@ -39,9 +39,13 @@ moving a published file rewrites it.
 - Only declared top-level directories. No committed `build/`, `dist/`, `artifacts/`.
 - Every file under `datasets/` is registered with a matching SHA-256.
 - Files under `datasets/` and `corrections/` are append-only versus the PR base.
-- No Azure subscription ids, private keys, storage keys, or tokens.
-- A release tag must match an `approved` entry in `registry/publications.json`
-  that carries a 64-hex Z2 ratification hash.
+- No Azure subscription ids, private keys, storage keys, tokens, or Azure
+  inventory exports, generated files included.
+- The frozen-path check fails the job if its base SHA cannot be resolved.
+- A release tag needs a ratified operations record binding the tag, the exact
+  commit, and each file's SHA-256 (`scripts/z2_release_auth.py`). Datasets in a
+  release need a license file and a `rights_ref`. See
+  `docs/publishing-architecture.md`.
 
 `scripts/inventory.py --check` fails when `registry/generated/` is stale.
 After changing tracked files, run `git add -A && python3 scripts/inventory.py`
@@ -50,7 +54,7 @@ and commit the result.
 ## Publication lifecycle
 
 ```
-draft → candidate → validated → approved (Z2 hash) → tagged → published
+draft → candidate → validated → approved (Z2 record, exact SHA) → tagged → published
                                                          ↘ corrected (new patch release only)
 ```
 

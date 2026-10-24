@@ -1,9 +1,8 @@
 // Azure Resource Graph inventory query.
 // Run in Resource Graph Explorer or `az graph query -q @inventory.kql --first 1000`.
 // Portal CSV export caps at 55,000 rows; script with paging (--skip-token) beyond that.
-// Sanitize before committing:
-//   python3 scripts/inventory.py --sanitize-arg-csv <export.csv> \
-//       --out-csv registry/azure-resources.snapshot.csv
+// Output is operational data. It never enters this public repo:
+//   python3 scripts/inventory.py --arg-csv <export.csv> --private-out <dir outside repo>
 Resources
 | project subscriptionId, resourceGroup, name, type, location, id, tags
 | order by type asc, name asc

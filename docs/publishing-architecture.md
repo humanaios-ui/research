@@ -10,20 +10,25 @@ Research" (external report), reviewed and corrected below.
 | Layer | Choice |
 |:--|:--|
 | Publication ledger | This repo: Git commits, immutable tags, GitHub Releases |
-| Release approval | Z2 ratification hash in `registry/publications.json`, checked by CI |
-| Catalog / workflow DB | Supabase Postgres (`infra/supabase/migrations/`) |
-| Global event store | Azure Cosmos DB **only** after a measured need |
+| Release approval | Z2 ratification in operations (`z1-inbox/INDEX.yaml`, signed by `.z1-control/ratify.py`, merged by Z2), re-verified by the release job |
+| Catalog | Git registry (`registry/*.json`) for now |
+| Catalog DB | Supabase Postgres, **deferred** until a measured need; migration is design only |
+| Global event store | Azure Cosmos DB: not adopted |
+| Azure inventory | Operational data, kept outside this public repo |
 | CI artifacts | Short-lived diagnostics only (90-day default retention) |
-| Announcements | Gmail draft, human sends |
+| Announcements | Gmail draft, human sends (not wired) |
 
-Weighted score from the report, re-checked: Supabase 83/100, Cosmos 75/100.
-The gap comes from relational fit (20% weight) and portability. Cosmos wins on
-global write scale and Azure fit, which this repo does not need today.
+Why Postgres over Cosmos if a DB is ever added: the catalog is relational
+(papers, authors, datasets, versions) and small. Cosmos is built for
+multi-region writes and very high throughput, which this repo does not have.
+The source report's numeric scores (83 vs 75) rested on judgment-based 1-5
+criteria scores with no stated method, so they are not repeated here.
 
 ## Corrections to the source report
 
-1. **Z2 gate was missing.** "Approved" now means a 64-hex Z2 ratification hash
-   in the registry. `validate_repository.py --release` blocks tags without it.
+1. **Z2 gate was missing.** A release now needs a ratified operations record
+   that binds the tag, the exact commit, and every file's SHA-256. See
+   "Release authorization" below.
 2. **No falsifiers.** Added below, as operations governance requires.
 3. **Commit size.** The proposed tree was ~40 files in one change. P19 caps
    authored commits at 13 files; this work landed as three commits.
@@ -33,8 +38,10 @@ global write scale and Azure fit, which this repo does not need today.
    Fixed: stdlib-only Python, SHA-pinned actions, flat release bundle.
 5. **Moving `datasets/acat_corpus_v2.csv`** into the new layout would rewrite a
    published file. It stays in place, registered as a legacy path.
-6. **Raw Azure ids in a public repo.** The inventory never writes them; it keeps
-   a completeness flag and a SHA-256 of complete ids only.
+6. **Azure inventory in a public repo.** Not even sanitized: names, groups and
+   regions reveal topology, and a hash of a predictable id is not anonymization.
+   `inventory.py --arg-csv` writes only to `--private-out` outside the repo, and
+   the validator rejects ARG-shaped files.
 7. **Mailbox.** Use the existing authorized business identity
    (aioshuman@gmail.com) rather than a new mailbox.
 8. **Citations** carried `utm_source=chatgpt.com` tracking. Strip before
@@ -43,12 +50,40 @@ global write scale and Azure fit, which this repo does not need today.
    Workflows here pin verified SHAs (`checkout` v4.2.2, `setup-python` v5.6.0,
    `attest-build-provenance` v2.4.0).
 
+## Release authorization
+
+1. Content merges to `main` with a `registry/publications.json` entry naming a
+   `z2_q_id`, plus `scope` and `limitations`.
+2. Z1 files a candidate in operations `z1-inbox/` with one block:
+
+   ````
+   ```json research-release
+   {"repo": "humanaios-ui/research", "release_tag": "...",
+    "git_commit": "<40-hex main commit>",
+    "files": [{"path": "...", "sha256": "..."}]}
+   ```
+   ````
+3. Z2 runs `ratify.py <q_id> --decision ACCEPT --by Night --apply` and merges.
+4. The tag is pushed on exactly that commit.
+5. `publish.yml` checks out operations `main` and `z2_release_auth.verify`
+   requires: status `ratified`, a listed ratifier, the recomputed signature,
+   the ruling file, no superseding entry, the same tag and commit, and every
+   approved file present at that commit with the approved SHA-256. Datasets in
+   the payload also need a `license_file` in the payload and a `rights_ref`.
+6. The bundle is built only from those files, read from the commit.
+
+Limit: like `ratify.py`, this pins content, not identity. Binding comes from
+Z2 merging the record in operations; CI cannot prove who signed.
+
+`workflow_dispatch` with `dry_run: true` rehearses every gate on an existing
+tag and uploads the bundle as a 7-day artifact without attesting or releasing.
+
 ## Falsifiers
 
 | Claim | Falsified if | Check |
 |:--|:--|:--|
-| Supabase fits the catalog better than Cosmos | Catalog needs multi-region writes, or sustained >1,000 writes/s, within 12 months | Supabase usage metrics, quarterly |
-| Git stays the record; DB is a projection | Catalog disagrees with Git/Releases more than once per quarter after sync is wired | Reconciliation job diff count |
+| No DB needed yet | A real catalog query or workflow cannot be served from `registry/*.json` | Log each such request; 3 in a quarter reopens the DB decision |
+| Unauthorized releases are zero | Any GitHub Release exists without a verifying operations record for its tag | Quarterly audit: rerun `validate --release` per release |
 | Releases are reproducible | A clean checkout of a tag yields a bundle whose SHA-256 differs from the published `checksums.sha256` | Rebuild on each release + quarterly sample |
 | Frozen means frozen | Any merged PR modifies or deletes a path under `datasets/` or `corrections/` | CI frozen-path check; `git log --diff-filter=MD` audit |
 
@@ -58,17 +93,23 @@ global write scale and Azure fit, which this repo does not need today.
 - [ ] Tag ruleset: restrict create/update/delete of `paper-*` and `dataset-*`.
 - [ ] Create `production` environment with required reviewer and tag rule.
 - [ ] Enable immutable releases if offered for this repo.
-- [ ] Add a `LICENSE` file for `acat-corpus-v2` (README promises CC0 per dataset). Licensing is your call.
+- [ ] Add `OPERATIONS_READ_TOKEN` (fine-grained, read-only, operations only) to the `production` environment, unless operations is public.
+- [ ] Confirm rights for `acat-corpus-v2`: add its LICENSE file and a `rights_ref` (consent / redistribution clearance). Until then it cannot be released.
 - [ ] Decide CODEOWNERS teams for this repo (none exist yet here).
 - [ ] Z2: update ZONE_REGISTRY Z-011 (research) cap to reflect this unlock.
+
+## Later milestones (from review on PR #6)
+
+- **B:** read-only ORCID reconciliation reusing `operations/orcid-publications-manager` (fix its DOI external-id keys, group dedup, null handling, retries first). Report-only; no ORCID writes, no auto-publish.
+- **C:** sandbox rehearsal end to end (approved SHA → bundle → attestation → mock release → catalog/email draft) with injected failures and an idempotent rerun.
 
 ## Not done (design only, per instruction)
 
 - No Supabase project created and no migration applied. The migration was
-  tested against a local PostgreSQL 16: stale-write rejection, slug check,
+  tested against a local PostgreSQL 16: compare-and-set (omitted, stale and
+  replayed versions rejected; of two concurrent writers one wins), slug check,
   published-version immutability, and anonymous read of published rows only.
-  Note: an update that omits `entity_version` still passes; writers must send it.
 - No Gmail draft created. Template: `docs/release-email.md`.
 - Azure CSV (`AzureResourceGraphResults-New_query_3.csv`) was not in this
-  session. To add it: `python3 scripts/inventory.py --sanitize-arg-csv <file>
-  --out-csv registry/azure-resources.snapshot.csv`, then regenerate inventory.
+  session. To inventory it privately: `python3 scripts/inventory.py --arg-csv
+  <file> --private-out <dir outside this repo>`.
