@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Build a reproducible release bundle for a publication tag.
 
-    python3 scripts/build_release_manifest.py --tag paper-<slug>-vX.Y.Z --out dist/
+    python3 scripts/build_release_manifest.py --tag paper-<slug>-vX.Y.Z \
+        --operations ../operations --out dist/
 
 Writes a flat directory (GitHub Release assets do not nest):
-    dist/<tag>.tar.gz      declared paths, sorted, mtime/owner zeroed
+    dist/<tag>.tar.gz      the Z2-approved files at the tagged commit, sorted,
+                           mtime/owner zeroed; each checked against its approved
+                           SHA-256 before it is packed
     dist/manifest.json     tag, commit, publication metadata, per-file SHA-256
     dist/checksums.sha256  SHA-256 of the two files above
 and notes/<tag>.md, the human release-notes header (kept out of dist/).
 
-Same commit + same registry entry = byte-identical bundle.
+Same commit + same approved file list = byte-identical bundle. Files come
+from `git show <commit>:<path>`, never the working tree.
 """
 import argparse
 import gzip
@@ -22,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import inventory  # noqa: E402
+import z2_release_auth  # noqa: E402
 
 NOTES = """# What this release is
 
@@ -35,7 +40,7 @@ NOTES = """# What this release is
 - Method version: {method_version}
 - License: {license}
 - DOI: {doi}
-- Z2 ratification hash: `{z2}`
+- Z2 ratification: `{q_id}` (`{z2}`)
 
 ## Reproducibility
 
@@ -52,23 +57,10 @@ NOTES = """# What this release is
 """
 
 
-def expand(root: Path, declared):
-    tracked = set(inventory.tracked_files(root))
-    files = set()
-    for p in declared:
-        p = p.rstrip("/")
-        hits = {f for f in tracked if f == p or f.startswith(p + "/")}
-        if not hits:
-            raise SystemExit(f"declared path {p} matches no tracked file")
-        files |= hits
-    return sorted(files)
-
-
-def deterministic_tar_gz(root: Path, files) -> bytes:
+def deterministic_tar_gz(blobs) -> bytes:
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w", format=tarfile.PAX_FORMAT) as tar:
-        for rel in files:
-            data = (root / rel).read_bytes()
+        for rel, data in blobs:
             info = tarfile.TarInfo(rel)
             info.size, info.mtime, info.mode = len(data), 0, 0o644
             info.uid = info.gid = 0
@@ -80,28 +72,36 @@ def deterministic_tar_gz(root: Path, files) -> bytes:
     return out.getvalue()
 
 
-def build(root: Path, tag: str, out: Path, notes_dir: Path) -> dict:
+def build(root: Path, tag: str, out: Path, notes_dir: Path, operations: Path,
+          commit: str = "HEAD") -> dict:
     pubs = json.loads((root / "registry/publications.json").read_text())["publications"]
     match = [p for p in pubs if p.get("release_tag") == tag]
-    if not match:
-        raise SystemExit(f"tag {tag}: no entry in registry/publications.json")
+    if len(match) != 1:
+        raise SystemExit(f"tag {tag}: expected one entry in registry/publications.json, "
+                         f"found {len(match)}")
     pub = match[0]
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, check=True,
+    commit = subprocess.run(["git", "rev-parse", f"{commit}^{{commit}}"], cwd=root, check=True,
                             capture_output=True, text=True).stdout.strip()
-    files = expand(root, pub.get("paths", []))
-    bundle = deterministic_tar_gz(root, files)
+    errors, files = z2_release_auth.verify(Path(operations), str(pub.get("z2_q_id")),
+                                           tag, commit, root)
+    if errors:
+        raise SystemExit("not authorized:\n  " + "\n  ".join(errors))
+    blobs = [(f, z2_release_auth.git_bytes(root, commit, f)) for f in files]
+    bundle = deterministic_tar_gz(blobs)
+    index = z2_release_auth.load_index(Path(operations))
+    z2_hash = next(c["z2_hash"] for c in index["candidates"] if c.get("q_id") == pub["z2_q_id"])
 
     manifest = {
         "schema_version": 1,
         "release_tag": tag,
         "git_commit": commit,
+        "z2": {"q_id": pub["z2_q_id"], "z2_hash": z2_hash},
         "publication": {k: pub.get(k) for k in
                         ("kind", "slug", "version", "title", "authors", "license",
-                         "method_version", "doi", "z2_ratification_hash")},
+                         "method_version", "doi", "scope", "limitations")},
         "bundle": {"name": f"{tag}.tar.gz", "sha256": inventory.sha256_bytes(bundle),
                    "bytes": len(bundle)},
-        "files": [{"path": f, "sha256": inventory.sha256_bytes((root / f).read_bytes())}
-                  for f in files],
+        "files": [{"path": f, "sha256": inventory.sha256_bytes(d)} for f, d in blobs],
     }
     manifest_text = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
 
@@ -118,7 +118,7 @@ def build(root: Path, tag: str, out: Path, notes_dir: Path) -> dict:
         title=pub.get("title"), tag=tag, commit=commit,
         method_version=pub.get("method_version") or "n/a",
         license=pub.get("license"), doi=pub.get("doi") or "pending",
-        z2=pub.get("z2_ratification_hash"),
+        q_id=pub["z2_q_id"], z2=z2_hash,
         corrections=pub.get("corrections") or "None."))
     return manifest
 
@@ -129,8 +129,11 @@ def main(argv=None) -> int:
     ap.add_argument("--tag", required=True)
     ap.add_argument("--out", default="dist")
     ap.add_argument("--notes-dir", default="notes")
+    ap.add_argument("--operations", required=True, help="humanaios-ui/operations checkout")
+    ap.add_argument("--commit", default="HEAD")
     args = ap.parse_args(argv)
-    m = build(Path(args.root).resolve(), args.tag, Path(args.out), Path(args.notes_dir))
+    m = build(Path(args.root).resolve(), args.tag, Path(args.out), Path(args.notes_dir),
+              Path(args.operations), args.commit)
     print(f"{args.tag}: {len(m['files'])} files, bundle sha256 {m['bundle']['sha256']}")
     return 0
 

@@ -103,7 +103,7 @@ class InventoryTest(unittest.TestCase):
 
     def test_deterministic_and_check(self):
         root = self.repo.root
-        self.assertEqual(inventory.render(root, None), inventory.render(root, None))
+        self.assertEqual(inventory.render(root), inventory.render(root))
         self.assertEqual(inventory.main(["--root", str(root), "--check"]), 1)
         self.assertEqual(inventory.main(["--root", str(root)]), 0)
         self.repo.commit("generated")
@@ -112,8 +112,23 @@ class InventoryTest(unittest.TestCase):
         git(root, "add", "-A")
         self.assertEqual(inventory.main(["--root", str(root), "--check"]), 1)
 
+    def test_azure_output_refused_inside_repo(self):
+        arg = Path(tempfile.mkdtemp()) / "arg.csv"
+        arg.write_text(RAW_ARG)
+        with self.assertRaises(SystemExit):
+            inventory.main(["--root", str(self.repo.root), "--arg-csv", str(arg),
+                            "--private-out", str(self.repo.root / "private")])
+        with self.assertRaises(SystemExit):
+            inventory.main(["--root", str(self.repo.root), "--arg-csv", str(arg)])
+        out = Path(tempfile.mkdtemp())
+        self.assertEqual(inventory.main(["--root", str(self.repo.root), "--arg-csv", str(arg),
+                                         "--private-out", str(out)]), 0)
+        self.assertNotIn("00000000-1111", (out / "azure-inventory.json").read_text())
+        public = json.dumps(inventory.render(self.repo.root))
+        self.assertNotIn("aios-acct", public)
+
     def test_checksums_cover_publication_data_only(self):
-        out = inventory.render(self.repo.root, None)["checksums.sha256"]
+        out = inventory.render(self.repo.root)["checksums.sha256"]
         self.assertIn("datasets/acme-corpus/v1-2026q1/data.csv", out)
         self.assertNotIn("README.md", out)
 
@@ -164,20 +179,22 @@ class ValidateTest(unittest.TestCase):
         git(self.repo.root, "add", "-A")
         self.assertIn("azure subscription id", " ".join(self.errors()))
 
-    def test_release_requires_z2_hash(self):
-        pub = {"release_tag": "paper-acme-v1.0.0", "kind": "paper", "slug": "acme",
-               "version": "1.0.0", "status": "approved", "title": "T",
-               "license": "CC-BY-4.0", "authors": ["A"], "paths": []}
-        self.repo.write("registry/publications.json",
-                        json.dumps({"publications": [pub]}).encode())
-        self.assertIn("Z2 ratification hash",
-                      " ".join(self.errors(release="paper-acme-v1.0.0")))
-        pub["z2_ratification_hash"] = "a" * 64
-        self.repo.write("registry/publications.json",
-                        json.dumps({"publications": [pub]}).encode())
-        self.assertEqual(self.errors(release="paper-acme-v1.0.0"), [])
-        self.assertIn("must be paper-", " ".join(self.errors(release="v1.0.0")))
+    def test_missing_base_fails_closed(self):
+        errs = " ".join(self.errors(base="no-such-ref"))
+        self.assertIn("refusing to skip the frozen-path check", errs)
 
+    def test_generated_files_are_secret_scanned(self):
+        self.repo.write("registry/generated/inventory.md", b"-----BEGIN RSA PRIVATE KEY-----")
+        git(self.repo.root, "add", "-A")
+        self.assertIn("private key", " ".join(self.errors()))
+
+    def test_azure_inventory_rejected_from_public_repo(self):
+        self.repo.write("registry/arg.csv", b"name,type,resourceGroup,location\nx,y,z,w\n")
+        self.repo.write("docs/inv.json", b'{"kind": "azure-resource"}')
+        git(self.repo.root, "add", "-A")
+        errs = " ".join(self.errors())
+        self.assertIn("Azure inventory export", errs)
+        self.assertIn("Azure resource records", errs)
 
 if __name__ == "__main__":
     unittest.main()

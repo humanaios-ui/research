@@ -3,7 +3,8 @@
 
     python3 scripts/validate_repository.py                     # structure, registry, secrets
     python3 scripts/validate_repository.py --base origin/main  # + frozen paths unchanged
-    python3 scripts/validate_repository.py --release TAG       # + tag is Z2-ratified
+    python3 scripts/validate_repository.py --release TAG --operations ../operations
+                                                               # + tag is Z2-ratified
 
 Errors exit 1. Warnings print but pass.
 """
@@ -16,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import inventory  # noqa: E402
+import z2_release_auth  # noqa: E402
 
 ROOT = inventory.ROOT
 ALLOWED_TOP = {"papers", "datasets", "supplementary", "corrections", "registry",
@@ -26,7 +28,7 @@ KEBAB = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SNAPSHOT = re.compile(r"^v\d+(?:-\d+)*-\d{4}(?:q[1-4]|h[12]|m(?:0[1-9]|1[0-2]))?$")
 RELEASE_TAG = re.compile(r"^(paper|dataset)-([a-z0-9]+(?:-[a-z0-9]+)*)-v(\d+\.\d+\.\d+)$")
 ERRATA = re.compile(r"^errata-\d{4}-\d{2}-\d{2}\.md$")
-HEX64 = re.compile(r"^[0-9a-f]{64}$")
+ARG_MARKERS = ("resourcegroup", "resource_group", "azure_id")
 SECRET_PATTERNS = [
     ("azure subscription id", re.compile(r"/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")),
     ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
@@ -47,6 +49,13 @@ class Report:
 
     def warn(self, msg):
         self.warnings.append(msg)
+
+
+def all_tracked(root: Path):
+    """Every tracked file, generated output included (the secret scan needs it)."""
+    out = subprocess.run(["git", "ls-files", "-z"], cwd=root, check=True,
+                         capture_output=True).stdout.decode()
+    return sorted(p for p in out.split("\0") if p)
 
 
 def check_structure(root: Path, files, rep: Report):
@@ -103,22 +112,34 @@ def check_registry(root: Path, files, rep: Report):
 
 
 def check_secrets(root: Path, files, rep: Report):
+    """Secrets and operational Azure inventory never live in this public repo."""
     for path in files:
-        if path in SECRET_SCAN_SKIP:
-            continue
         try:
             text = (root / path).read_text(encoding="utf-8")
         except (UnicodeDecodeError, FileNotFoundError):
             continue
-        for label, pattern in SECRET_PATTERNS:
-            if pattern.search(text):
-                rep.error(f"{path}: possible {label}")
+        if path not in SECRET_SCAN_SKIP:
+            for label, pattern in SECRET_PATTERNS:
+                if pattern.search(text):
+                    rep.error(f"{path}: possible {label}")
+        if path.endswith(".csv"):
+            header = text.split("\n", 1)[0].lower()
+            if any(m in header for m in ARG_MARKERS):
+                rep.error(f"{path}: looks like an Azure inventory export; keep it out of "
+                          "this public repo (use inventory.py --private-out)")
+        if path.endswith(".json") and '"azure-resource"' in text:
+            rep.error(f"{path}: contains Azure resource records; keep them private")
 
 
 def check_frozen(root: Path, base: str, rep: Report):
     """Frozen paths are append-only: no modify, delete, or rename vs base."""
-    out = subprocess.run(["git", "diff", "--name-status", "--no-renames", f"{base}...HEAD"],
-                         cwd=root, check=True, capture_output=True, text=True).stdout
+    r = subprocess.run(["git", "diff", "--name-status", "--no-renames", f"{base}...HEAD"],
+                       cwd=root, capture_output=True, text=True)
+    if r.returncode != 0:
+        rep.error(f"base '{base}' cannot be compared to HEAD; refusing to skip the "
+                  f"frozen-path check ({r.stderr.strip()[:200]})")
+        return
+    out = r.stdout
     for line in out.splitlines():
         status, path = line.split("\t", 1)
         bucket, lifecycle = inventory.classify(path)
@@ -127,42 +148,65 @@ def check_frozen(root: Path, base: str, rep: Report):
                       "Corrections are appended as new files, never edited in place.")
 
 
-def check_release(root: Path, tag: str, rep: Report):
+def check_release(root: Path, tag: str, operations, commit: str, rep: Report):
     m = RELEASE_TAG.match(tag)
     if not m:
         rep.error(f"tag {tag}: must be paper-<slug>-vX.Y.Z or dataset-<slug>-vX.Y.Z")
         return
     kind, slug, version = m.groups()
     pubs = json.loads((root / "registry/publications.json").read_text())["publications"]
+    tags = [p.get("release_tag") for p in pubs]
+    keys = [(p.get("kind"), p.get("slug"), p.get("version")) for p in pubs]
+    for dup in sorted({t for t in tags if tags.count(t) > 1}):
+        rep.error(f"registry: duplicate release_tag {dup}")
+    for dup in sorted({k for k in keys if keys.count(k) > 1}):
+        rep.error(f"registry: duplicate kind/slug/version {dup}")
     match = [p for p in pubs if p.get("release_tag") == tag]
     if not match:
         rep.error(f"tag {tag}: no entry in registry/publications.json")
         return
     pub = match[0]
-    if pub.get("kind") != kind or pub.get("slug") != slug or pub.get("version") != version:
+    if (pub.get("kind"), pub.get("slug"), pub.get("version")) != (kind, slug, version):
         rep.error(f"tag {tag}: registry entry kind/slug/version do not match the tag")
-    if pub.get("status") != "approved":
-        rep.error(f"tag {tag}: status is '{pub.get('status')}', must be 'approved' before tagging")
-    if not HEX64.match(pub.get("z2_ratification_hash", "")):
-        rep.error(f"tag {tag}: missing Z2 ratification hash (64 hex chars)")
-    for key in ("title", "license", "authors"):
+    for key in ("title", "license", "authors", "scope", "limitations", "z2_q_id"):
         if not pub.get(key):
             rep.error(f"tag {tag}: missing {key}")
-    for path in pub.get("paths", []):
-        if not (root / path).exists():
-            rep.error(f"tag {tag}: declared path {path} does not exist")
+    if not operations:
+        rep.error(f"tag {tag}: --operations checkout is required to verify Z2 ratification")
+        return
+    errors, approved = z2_release_auth.verify(Path(operations), str(pub.get("z2_q_id")),
+                                              tag, commit, root)
+    for e in errors:
+        rep.error(f"tag {tag}: {e}")
+    # Rights are a release blocker: any approved dataset file needs a license
+    # file and a rights/consent reference in the registry.
+    datasets = {d["path"]: d for d in
+                json.loads((root / "registry/datasets.json").read_text())["datasets"]}
+    for path in approved:
+        if path.startswith("datasets/") and Path(path).name not in ("README.md", "LICENSE"):
+            ds = datasets.get(path)
+            if not ds:
+                rep.error(f"tag {tag}: {path} is not registered")
+                continue
+            lic = ds.get("license_file")
+            if not lic or lic not in approved:
+                rep.error(f"tag {tag}: dataset {ds['id']} has no license file in the release")
+            if not ds.get("rights_ref"):
+                rep.error(f"tag {tag}: dataset {ds['id']} has no rights/consent reference")
 
 
-def run(root: Path, base=None, release=None) -> Report:
+def run(root: Path, base=None, release=None, operations=None, commit="HEAD") -> Report:
     rep = Report()
-    files = inventory.tracked_files(root)
+    files = all_tracked(root)
     check_structure(root, files, rep)
     check_registry(root, files, rep)
     check_secrets(root, files, rep)
     if base:
         check_frozen(root, base, rep)
     if release:
-        check_release(root, release, rep)
+        sha = subprocess.run(["git", "rev-parse", f"{commit}^{{commit}}"], cwd=root,
+                             capture_output=True, text=True).stdout.strip()
+        check_release(root, release, operations, sha, rep)
     return rep
 
 
@@ -171,8 +215,11 @@ def main(argv=None) -> int:
     ap.add_argument("--root", default=str(ROOT))
     ap.add_argument("--base", help="Git ref to diff against for the frozen-path check")
     ap.add_argument("--release", metavar="TAG", help="Validate a release tag")
+    ap.add_argument("--operations", help="Path to a humanaios-ui/operations checkout")
+    ap.add_argument("--commit", default="HEAD", help="Commit the tag points at")
     args = ap.parse_args(argv)
-    rep = run(Path(args.root).resolve(), args.base, args.release)
+    rep = run(Path(args.root).resolve(), args.base, args.release, args.operations,
+              args.commit)
     for w in rep.warnings:
         print(f"warning: {w}")
     for e in rep.errors:
