@@ -84,7 +84,7 @@ def build(root: Path, tag: str, out: Path, notes_dir: Path, operations: Path,
                          f"at {commit[:12]}, found {len(match)}")
     pub = match[0]
     errors, files = z2_release_auth.verify(Path(operations), str(pub.get("z2_q_id")),
-                                           tag, commit, root)
+                                           tag, commit, root, require_tag=True)
     errors = errors or z2_release_auth.dataset_rights_errors(root, commit, files)
     if errors:
         raise SystemExit("not authorized:\n  " + "\n  ".join(errors))
