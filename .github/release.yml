@@ -1,0 +1,13 @@
+# Categories for GitHub generated release notes.
+changelog:
+  exclude:
+    labels: [skip-changelog]
+  categories:
+    - title: Methodology
+      labels: [methodology]
+    - title: Data
+      labels: [data]
+    - title: Corrections
+      labels: [correction]
+    - title: Other changes
+      labels: ["*"]

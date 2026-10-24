@@ -156,6 +156,20 @@
     },
     {
       "bucket": "source",
+      "bytes": 305,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "ae793f7a405ae5ee5d2232a15b1d681ed008942a",
+      "inventory_id": "git:.github/release.yml",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "release.yml",
+      "path": ".github/release.yml",
+      "sha256": "cadab07de5842f25cb76a3d0ace81a212a0845f32edea91960bef28058b8d099",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
       "bytes": 1093,
       "data_class": "public",
       "dataset_id": "",
@@ -166,6 +180,20 @@
       "name": "ci.yml",
       "path": ".github/workflows/ci.yml",
       "sha256": "83ff324c2631c51fd1c9923fcb401c398c8eba8afed32cf55d61d85f24df9252",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
+      "bytes": 2070,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "1f85fe021dcd656e85f55f8b8cc543b41315d063",
+      "inventory_id": "git:.github/workflows/publish.yml",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "publish.yml",
+      "path": ".github/workflows/publish.yml",
+      "sha256": "306027313e95cf2d316a86a1680424194db26e6f657b74e6cbd745c79b48bbcc",
       "source_system": "github"
     },
     {
@@ -254,6 +282,34 @@
     },
     {
       "bucket": "source",
+      "bytes": 4389,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "c901015719995facbaf5872700fc6e9e901cb298",
+      "inventory_id": "git:docs/publishing-architecture.md",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "publishing-architecture.md",
+      "path": "docs/publishing-architecture.md",
+      "sha256": "34be47e26ec72ee2517e2cf4484f6590135f602397ab1416f16efe96abd5f867",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
+      "bytes": 1159,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "06bc7e70a5ed74a0edd5fc0f2e465cc9825be397",
+      "inventory_id": "git:docs/release-email.md",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "release-email.md",
+      "path": "docs/release-email.md",
+      "sha256": "144cdd275b93334cbf2fe0d7adba2bb99ec3ccd591f6aedac0d7d948ec0c9315",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
       "bytes": 484,
       "data_class": "public",
       "dataset_id": "",
@@ -264,6 +320,20 @@
       "name": "inventory.kql",
       "path": "infra/azure/resource-graph/inventory.kql",
       "sha256": "289291b0a8ca6daa3b5fcc791baacf5cca07c791f232ac64dcde44ed390f9fec",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
+      "bytes": 7165,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "a767c83b71c7076cf32261483ead8092f5248dd9",
+      "inventory_id": "git:infra/supabase/migrations/20261024000000_publication_catalog.sql",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "20261024000000_publication_catalog.sql",
+      "path": "infra/supabase/migrations/20261024000000_publication_catalog.sql",
+      "sha256": "971e59ef19356c2210496881e7e00070bd9a8a450e19a4f82835d0c325d3d523",
       "source_system": "github"
     },
     {
@@ -306,6 +376,20 @@
       "name": "publications.json",
       "path": "registry/publications.json",
       "sha256": "c54189cca1342fe21a7b9d23b6d8aa4402012326c8fefceeb875fb66792ffc84",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
+      "bytes": 4806,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "f06d60a555da12f1ef061250527b5076fdb33c99",
+      "inventory_id": "git:scripts/build_release_manifest.py",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "build_release_manifest.py",
+      "path": "scripts/build_release_manifest.py",
+      "sha256": "7771272c9e310664ac3cb455643676852a25862088d33b0bb8348c208741e9d4",
       "source_system": "github"
     },
     {
@@ -362,6 +446,20 @@
       "name": "test_publishing.py",
       "path": "tests/test_publishing.py",
       "sha256": "7ff0417ca4787d37baa5e0ca385989fde89a16b36ed09d7e4e152e1bdb62705c",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
+      "bytes": 2311,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "224884cf23e4398f17d8f4536a4a1a0d4f74eae4",
+      "inventory_id": "git:tests/test_release_manifest.py",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "test_release_manifest.py",
+      "path": "tests/test_release_manifest.py",
+      "sha256": "a5a7626ce18da45bb8de7159ac4918e9abec4dd7ca2b99d3ae29608481bfea84",
       "source_system": "github"
     }
   ],
