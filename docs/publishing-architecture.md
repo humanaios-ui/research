@@ -78,6 +78,32 @@ Z2 merging the record in operations; CI cannot prove who signed.
 `workflow_dispatch` with `dry_run: true` rehearses every gate on an existing
 tag and uploads the bundle as a 7-day artifact without attesting or releasing.
 
+## Sandbox rehearsal (Milestone C)
+
+`scripts/rehearse_release.py --workdir <empty dir>` runs the whole release
+path end to end with no network: a throwaway research repo with a synthetic
+dataset, a SANDBOX Z2 record, the real validator and bundle builder, and
+file-backed mocks of GitHub Releases, the catalog, and the Gmail draft.
+
+```
+approved_exact_sha → validated → tagged → bundled → attested
+    → released → catalog_recorded → email_drafted
+```
+
+- `<workdir>/state.json` records every transition (state, commit, actor,
+  time, status). A failed step stops the run; nothing after it happens.
+- `--fail-at <step>` injects a failure; running again resumes there.
+- A repeat run re-checks finished steps for drift and changes nothing.
+- The mock release refuses a second release of the same tag with other
+  assets, and the catalog never records a release that does not exist.
+- `--scenario forged-hash | mutated-after-approval | unratified |
+  missing-license` must each end with zero releases.
+
+`tests/test_release_rehearsal.py` runs all of this in CI. It proves the
+pipeline logic, not the real services: the GitHub Release, attestation
+signing, Supabase and Gmail steps are mocks. A `publish.yml` dry run on a
+real tag is still the step before production.
+
 ## Falsifiers
 
 | Claim | Falsified if | Check |
@@ -101,7 +127,7 @@ tag and uploads the bundle as a 7-day artifact without attesting or releasing.
 ## Later milestones (from review on PR #6)
 
 - **B:** read-only ORCID reconciliation reusing `operations/orcid-publications-manager` (fix its DOI external-id keys, group dedup, null handling, retries first). Report-only; no ORCID writes, no auto-publish.
-- **C:** sandbox rehearsal end to end (approved SHA → bundle → attestation → mock release → catalog/email draft) with injected failures and an idempotent rerun.
+- **C:** done, see "Sandbox rehearsal" above.
 
 ## Not done (design only, per instruction)
 
