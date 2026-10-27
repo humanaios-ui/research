@@ -282,16 +282,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 6778,
+      "bytes": 7933,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "96661f72ffb4a4ed3aa387c878828beed6d20f8f",
+      "git_blob_sha": "25fc704e5f3778eb6f89f32f4f46b3eb7425c1f3",
       "inventory_id": "git:docs/publishing-architecture.md",
       "kind": "file",
       "lifecycle": "active",
       "name": "publishing-architecture.md",
       "path": "docs/publishing-architecture.md",
-      "sha256": "8ccdd6b5f0e058146b4518aac2ab723a2e388d6bbad85eb465e533ce528f04cd",
+      "sha256": "702485481d5b3c00c42a966521366b41f03219e9f891c815f61a7adee41f991b",
       "source_system": "github"
     },
     {
@@ -408,6 +408,20 @@
     },
     {
       "bucket": "source",
+      "bytes": 15105,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "5e5cc9991ec469d5944eb51db67bb9fd34d48eb6",
+      "inventory_id": "git:scripts/rehearse_release.py",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "rehearse_release.py",
+      "path": "scripts/rehearse_release.py",
+      "sha256": "2a18f35dc35b89af6fafa7fc128d024a34ffa2a2681b0901778f72a5c37b0f28",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
       "bytes": 10492,
       "data_class": "public",
       "dataset_id": "",
@@ -474,6 +488,20 @@
       "name": "test_release_auth.py",
       "path": "tests/test_release_auth.py",
       "sha256": "5c94e0c90ed88c270172f9d8ae87737015d991dd389650da0968361579e1f18e",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
+      "bytes": 5721,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "c2cfbebb3673fd4d532f52c1416afeced074b0b5",
+      "inventory_id": "git:tests/test_release_rehearsal.py",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "test_release_rehearsal.py",
+      "path": "tests/test_release_rehearsal.py",
+      "sha256": "6de625b0f86193096cd312cba586b0f5f90366cbb8a163e6a9623b0f0f033887",
       "source_system": "github"
     }
   ],
