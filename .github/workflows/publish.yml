@@ -48,7 +48,8 @@ jobs:
           repository: humanaios-ui/operations
           ref: main
           path: _operations
-          token: ${{ secrets.OPERATIONS_READ_TOKEN }}
+          # Unset when operations is public: fall back to this run's token.
+          token: ${{ secrets.OPERATIONS_READ_TOKEN || github.token }}
           persist-credentials: false
 
       - name: Set up Python

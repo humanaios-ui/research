@@ -104,10 +104,14 @@ class ReleaseAuthTest(unittest.TestCase):
     def tag(self, commit=None):
         git(self.repo.root, "tag", "-f", TAG, commit or self.commit)
 
-    def assert_no_bundle(self):
+    def assert_no_bundle(self, reason):
+        """The builder refuses for `reason`, with the tag in place so a missing
+        tag can never be the blocker that makes the test pass."""
+        self.tag()
         out = Path(tempfile.mkdtemp())
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit) as cm:
             brm.build(self.repo.root, TAG, out / "dist", out / "notes", self.ops.root)
+        self.assertIn(reason, str(cm.exception))
         self.assertFalse((out / "dist").exists())
 
     # --- the one path that may publish ---
@@ -140,7 +144,7 @@ class ReleaseAuthTest(unittest.TestCase):
         doc["candidates"][0]["z2_hash"] = "a" * 64
         (self.ops.root / "z1-inbox/INDEX.yaml").write_text(yaml.safe_dump(doc))
         self.assertIn("SIGNATURE MISMATCH", self.errors())
-        self.assert_no_bundle()
+        self.assert_no_bundle("SIGNATURE MISMATCH")
 
     def test_candidate_edited_after_ratification(self):
         self.ops.file(self.release(), tamper=True)
@@ -153,7 +157,7 @@ class ReleaseAuthTest(unittest.TestCase):
         for form in (Q_ID, f"Q-OTHER, {Q_ID}", f"Q-OTHER,{Q_ID}", ["Q-OTHER", Q_ID]):
             self.ops.file(self.release(), extra=[{"q_id": "Q-NEXT", "supersedes": form}])
             self.assertIn("superseded by", self.errors(), form)
-        self.assert_no_bundle()
+        self.assert_no_bundle("superseded by")
         self.ops.file(self.release(), extra=[{"q_id": "Q-NEXT", "supersedes": [f"{Q_ID}-2"]}])
         self.assertNotIn("superseded by", self.errors())  # no prefix match
 
@@ -175,7 +179,7 @@ class ReleaseAuthTest(unittest.TestCase):
     def test_tag_on_different_commit(self):
         self.ops.file(self.release(git_commit="f" * 40))
         self.assertIn("approved commit is", self.errors())
-        self.assert_no_bundle()
+        self.assert_no_bundle("approved commit is")
 
     def test_file_changed_after_approval(self):
         self.ops.file(self.release())
@@ -190,7 +194,7 @@ class ReleaseAuthTest(unittest.TestCase):
     def test_empty_payload(self):
         self.ops.file(self.release(files=[]))
         self.assertIn("approved file list is empty", self.errors())
-        self.assert_no_bundle()
+        self.assert_no_bundle("approved file list is empty")
 
     def test_traversal_duplicate_and_untracked_paths(self):
         good = self.release()["files"][0]
@@ -203,6 +207,13 @@ class ReleaseAuthTest(unittest.TestCase):
         self.assertIn("unsafe or non-normalized path '../etc/passwd'", errs)
         self.assertIn("unsafe or non-normalized path 'datasets/./x'", errs)
         self.assertIn("not tracked at", errs)
+
+    def test_directory_is_never_an_approved_file(self):
+        listing = subprocess.run(["git", "show", f"{self.commit}:datasets"], cwd=self.repo.root,
+                                 capture_output=True).stdout
+        self.ops.file(self.release(files=[{"path": "datasets", "sha256": sha(listing)}]))
+        self.assertIn("not tracked at", self.errors())
+        self.assert_no_bundle("not tracked at")
 
     def test_wrong_approved_hash(self):
         files = [{"path": DATA, "sha256": "0" * 64}]
@@ -229,7 +240,7 @@ class ReleaseAuthTest(unittest.TestCase):
         errs = self.errors()
         self.assertIn("no license file in the release", errs)
         self.assertIn("no rights/consent reference", errs)
-        self.assert_no_bundle()  # the standalone builder refuses it too
+        self.assert_no_bundle("no rights/consent reference")  # the builder refuses it too
 
     def test_rights_are_read_at_the_released_commit(self):
         reg = json.loads((self.repo.root / "registry/datasets.json").read_text())

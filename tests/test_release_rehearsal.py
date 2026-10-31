@@ -4,6 +4,7 @@ Asserts zero unauthorized releases, no state advance on failure, resume after
 an injected failure, and that a repeat run changes nothing.
 """
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -106,6 +107,16 @@ class DriftTest(unittest.TestCase):
         self.assertIn("different assets", st["transitions"][-1]["detail"])
         self.assertEqual(rr.summary(w)["catalog"], {})
 
+    def test_corrupted_release_asset_is_refused(self):
+        w = workdir()
+        rr.run(w)
+        asset = w / "services/releases" / rr.TAG / "manifest.json"
+        asset.write_text("{}\n")  # release.json left unchanged
+        st = rr.run(w)
+        self.assertEqual(st["result"], "failed")
+        self.assertEqual(st["transitions"][-1]["state"], "released")
+        self.assertIn("different assets", st["transitions"][-1]["detail"])
+
     def test_moved_tag_is_refused(self):
         w = workdir()
         rr.run(w, fail_at="bundled")
@@ -129,6 +140,28 @@ class DriftTest(unittest.TestCase):
         st = rr.run(w)
         self.assertEqual(st["result"], "complete")
         self.assertEqual(st["release_commit"], st["approved_commit"])
+
+
+class SafetyTest(unittest.TestCase):
+    def test_new_rehearsal_refuses_a_nonempty_workdir(self):
+        w = workdir()
+        real = w / "operations/z1-inbox/INDEX.yaml"
+        real.parent.mkdir(parents=True)
+        real.write_text("real data\n")
+        with self.assertRaises(SystemExit):
+            rr.run(w)
+        self.assertEqual(real.read_text(), "real data\n")
+        self.assertFalse((w / "state.json").exists())
+
+    def test_real_step_error_is_recorded_as_a_failed_transition(self):
+        w = workdir()
+        rr.run(w, fail_at="released")
+        shutil.rmtree(w / "dist")
+        (w / "dist").write_text("not a directory\n")  # an OSError, not a StepFailed
+        st = rr.run(w)
+        self.assertEqual(st["result"], "failed")
+        self.assertEqual(st["transitions"][-1]["status"], "failed")
+        self.assertEqual(rr.summary(w)["releases"], [])
 
 
 if __name__ == "__main__":

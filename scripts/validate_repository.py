@@ -9,6 +9,8 @@
 Errors exit 1. Warnings print but pass.
 """
 import argparse
+import csv
+import io
 import json
 import re
 import subprocess
@@ -111,6 +113,20 @@ def check_registry(root: Path, files, rep: Report):
             rep.error(f"{path}: dataset file is not registered in registry/datasets.json")
 
 
+def looks_like_arg_header(text: str) -> bool:
+    """A header the inventory importer would read as Azure inventory, using
+    its own column aliases (e.g. resourceName,resourceType,rg,...)."""
+    headers = [h.strip() for h in next(csv.reader(io.StringIO(text)), [])]
+    mapping, _ = inventory.resolve_columns(headers)
+    if "azure_id_complete" in mapping or "azure_id_sha256" in mapping:
+        return True
+    # A bare `id` column is common in datasets; only a resource-style id counts.
+    resource_ids = {a.lower() for a in inventory.ARG_ALIASES["azure_id"] if a != "id"}
+    if resource_ids & {h.lower() for h in headers}:
+        return True
+    return "resource_group" in mapping and bool({"resource_name", "resource_type"} & set(mapping))
+
+
 def check_secrets(root: Path, files, rep: Report):
     """Secrets and operational Azure inventory never live in this public repo."""
     for path in files:
@@ -124,7 +140,7 @@ def check_secrets(root: Path, files, rep: Report):
                     rep.error(f"{path}: possible {label}")
         if path.endswith(".csv"):
             header = text.split("\n", 1)[0].lower()
-            if any(m in header for m in ARG_MARKERS):
+            if any(m in header for m in ARG_MARKERS) or looks_like_arg_header(text):
                 rep.error(f"{path}: looks like an Azure inventory export; keep it out of "
                           "this public repo (use inventory.py --private-out)")
         if path.endswith(".json") and '"azure-resource"' in text:
@@ -133,15 +149,15 @@ def check_secrets(root: Path, files, rep: Report):
 
 def check_frozen(root: Path, base: str, rep: Report):
     """Frozen paths are append-only: no modify, delete, or rename vs base."""
-    r = subprocess.run(["git", "diff", "--name-status", "--no-renames", f"{base}...HEAD"],
-                       cwd=root, capture_output=True, text=True)
+    # -z: paths come raw and NUL-separated, never quoted (non-ASCII names).
+    r = subprocess.run(["git", "diff", "--name-status", "--no-renames", "-z", f"{base}...HEAD"],
+                       cwd=root, capture_output=True)
     if r.returncode != 0:
         rep.error(f"base '{base}' cannot be compared to HEAD; refusing to skip the "
-                  f"frozen-path check ({r.stderr.strip()[:200]})")
+                  f"frozen-path check ({r.stderr.decode(errors='replace').strip()[:200]})")
         return
-    out = r.stdout
-    for line in out.splitlines():
-        status, path = line.split("\t", 1)
+    fields = r.stdout.decode("utf-8", errors="surrogateescape").split("\0")
+    for status, path in zip(fields[0::2], fields[1::2]):
         bucket, lifecycle = inventory.classify(path)
         if lifecycle == "frozen" and status[0] in "MDT":
             rep.error(f"{path}: frozen path {'modified' if status[0] != 'D' else 'deleted'}. "

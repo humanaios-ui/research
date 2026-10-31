@@ -64,7 +64,9 @@ def load_index(operations_root: Path) -> dict:
 
 
 def git_bytes(research_root: Path, commit: str, path: str):
-    r = subprocess.run(["git", "show", f"{commit}:{path}"], cwd=research_root,
+    """Bytes of the file at `commit:path`, or None. Blob only: a directory
+    (tree) is not a file and is never approved or packed as one."""
+    r = subprocess.run(["git", "cat-file", "blob", f"{commit}:{path}"], cwd=research_root,
                        capture_output=True)
     return r.stdout if r.returncode == 0 else None
 

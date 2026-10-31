@@ -151,7 +151,9 @@ def mock_release(workdir: Path, tag: str, dist: Path) -> str:
     assets = {p.name: sha256(p.read_bytes()) for p in sorted(dist.iterdir())}
     if target.exists():
         have = json.loads((target / "release.json").read_text())["assets"]
-        if have != assets:
+        on_disk = {p.name: sha256(p.read_bytes()) for p in sorted(target.iterdir())
+                   if p.name != "release.json"}
+        if have != assets or on_disk != assets:
             raise StepFailed(f"release {tag} already exists with different assets; "
                              "a correction must be a new version")
         return "already released, assets identical"
@@ -273,6 +275,11 @@ def record(workdir: Path, st: dict, name: str, status: str, detail: str):
 def run(workdir: Path, scenario: str = "happy", fail_at=None) -> dict:
     workdir = Path(workdir)
     if not (workdir / "state.json").exists():
+        # A fresh rehearsal only writes into an empty directory, so it can
+        # never overwrite real files. A resume is found by its state.json.
+        if workdir.exists() and any(workdir.iterdir()):
+            raise SystemExit(f"{workdir} is not empty and has no state.json; "
+                             "use an empty directory for a new rehearsal")
         setup(workdir, scenario)
     st = json.loads((workdir / "state.json").read_text())
     done = STEPS.index(st["current"]) + 1 if st["current"] else 0
@@ -282,8 +289,11 @@ def run(workdir: Path, scenario: str = "happy", fail_at=None) -> dict:
             if name == fail_at:
                 raise StepFailed(f"injected failure at {name}")
             detail = step(name, workdir, st)
-        except StepFailed as e:
-            record(workdir, st, name, "failed", str(e))
+        except (StepFailed, SystemExit, subprocess.CalledProcessError,
+                OSError, ValueError, KeyError) as e:
+            # Real failures (unauthorized build, git error, bad mock metadata)
+            # are recorded like injected ones, so resume sees them.
+            record(workdir, st, name, "failed", str(e) or type(e).__name__)
             st["result"] = "failed"
             return st
         if i >= done:

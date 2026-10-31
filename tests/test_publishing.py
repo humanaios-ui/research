@@ -196,5 +196,28 @@ class ValidateTest(unittest.TestCase):
         self.assertIn("Azure inventory export", errs)
         self.assertIn("Azure resource records", errs)
 
+    def test_aliased_azure_inventory_header_rejected(self):
+        # Header the importer reads via aliases; no subscription id in the rows.
+        self.repo.write("registry/arg2.csv",
+                        b"resourceName,resourceType,rg,region,resourceId\nx,y,z,w,\n")
+        git(self.repo.root, "add", "-A")
+        self.assertIn("Azure inventory export", " ".join(self.errors()))
+
+    def test_plain_dataset_header_is_not_inventory(self):
+        self.repo.write("docs/scores.csv", b"id,name,type,score\n1,a,b,0.5\n")
+        git(self.repo.root, "add", "-A")
+        self.assertNotIn("Azure inventory export", " ".join(self.errors()))
+
+    def test_frozen_edit_with_non_ascii_name_blocked(self):
+        name = "corrections/acme/errata-caf\u00e9.md"
+        self.repo.write(name, b"fix\n")
+        self.repo.commit("errata")
+        git(self.repo.root, "branch", "base")
+        self.repo.write(name, b"rewritten\n")
+        self.repo.commit("rewrite")
+        errs = " ".join(self.errors(base="base"))
+        self.assertIn("frozen path modified", errs)
+        self.assertIn(name, errs)
+
 if __name__ == "__main__":
     unittest.main()
