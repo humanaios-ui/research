@@ -268,6 +268,20 @@
     },
     {
       "bucket": "publication-data",
+      "bytes": 7048,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "0e259d42c996742e9e3cba14c677129b2c1b6311",
+      "inventory_id": "git:datasets/LICENSE",
+      "kind": "file",
+      "lifecycle": "frozen",
+      "name": "LICENSE",
+      "path": "datasets/LICENSE",
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+      "source_system": "github"
+    },
+    {
+      "bucket": "publication-data",
       "bytes": 146405,
       "data_class": "public",
       "dataset_id": "acat-corpus-v2",
@@ -306,6 +320,20 @@
       "name": "release-email.md",
       "path": "docs/release-email.md",
       "sha256": "144cdd275b93334cbf2fe0d7adba2bb99ec3ccd591f6aedac0d7d948ec0c9315",
+      "source_system": "github"
+    },
+    {
+      "bucket": "source",
+      "bytes": 2441,
+      "data_class": "public",
+      "dataset_id": "",
+      "git_blob_sha": "5525cc48e59c3a70adfe5c59ee596d49795ab9ca",
+      "inventory_id": "git:docs/rights/acat-corpus-v2.md",
+      "kind": "file",
+      "lifecycle": "active",
+      "name": "acat-corpus-v2.md",
+      "path": "docs/rights/acat-corpus-v2.md",
+      "sha256": "61070b8a6798d76c983d98a3053d0adbe39ad0facde91e1ed78d2d9dcf7d071f",
       "source_system": "github"
     },
     {
