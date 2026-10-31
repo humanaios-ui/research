@@ -120,7 +120,7 @@ real tag is still the step before production.
 - [ ] Create `production` environment with required reviewer and tag rule.
 - [ ] Enable immutable releases if offered for this repo.
 - [ ] Add `OPERATIONS_READ_TOKEN` (fine-grained, read-only, operations only) to the `production` environment, unless operations is public.
-- [ ] Confirm rights for `acat-corpus-v2`: add its LICENSE file and a `rights_ref` (consent / redistribution clearance). Until then it cannot be released.
+- [x] Confirm rights for `acat-corpus-v2`: CC0-1.0 in `datasets/LICENSE`, rights record in `docs/rights/acat-corpus-v2.md` (Z2, 2026-10-31).
 - [ ] Decide CODEOWNERS teams for this repo (none exist yet here).
 - [ ] Z2: update ZONE_REGISTRY Z-011 (research) cap to reflect this unlock.
 

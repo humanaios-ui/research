@@ -282,16 +282,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 7933,
+      "bytes": 7919,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "25fc704e5f3778eb6f89f32f4f46b3eb7425c1f3",
+      "git_blob_sha": "e75f1bda47f31393fbb6eb30d024c88b829b6121",
       "inventory_id": "git:docs/publishing-architecture.md",
       "kind": "file",
       "lifecycle": "active",
       "name": "publishing-architecture.md",
       "path": "docs/publishing-architecture.md",
-      "sha256": "702485481d5b3c00c42a966521366b41f03219e9f891c815f61a7adee41f991b",
+      "sha256": "bc67b037e7490f47ae27f581ce5b8deb5cfffb923ac53fa8ced3a4c7f494122f",
       "source_system": "github"
     },
     {
@@ -352,16 +352,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 1038,
+      "bytes": 1047,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "69919ebc620dfdd5a95cad17b32ad10cfbc7d0e1",
+      "git_blob_sha": "0f20dd5aff12447aa7ec6daa3aae9ab3b0084fb6",
       "inventory_id": "git:registry/datasets.json",
       "kind": "file",
       "lifecycle": "active",
       "name": "datasets.json",
       "path": "registry/datasets.json",
-      "sha256": "4d2f43ab2717e7d0511812a1618c7e5ec462f5fc742ba2f83df86afae9ae1492",
+      "sha256": "5dfe30c95ecc2a2303433c8c11d7b0b5ec3bc3d30f97f1c1116b89f35339a67c",
       "source_system": "github"
     },
     {

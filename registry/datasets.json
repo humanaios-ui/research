@@ -15,9 +15,9 @@
       "columns": 28,
       "sha256": "884ef1506e918b58757a154dfcd4394e1534ad511133b2e377b05d9df81a4237",
       "license": "CC0-1.0",
-      "license_status": "unverified: intended per README; release blocked until license_file and rights_ref are set",
-      "license_file": null,
-      "rights_ref": null,
+      "license_status": "CC0-1.0 confirmed by Z2 (Night) 2026-10-31; see rights_ref",
+      "license_file": "datasets/LICENSE",
+      "rights_ref": "docs/rights/acat-corpus-v2.md",
       "data_class": "public",
       "lifecycle": "frozen"
     }
