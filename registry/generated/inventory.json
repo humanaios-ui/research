@@ -324,16 +324,16 @@
     },
     {
       "bucket": "source",
-      "bytes": 2441,
+      "bytes": 2328,
       "data_class": "public",
       "dataset_id": "",
-      "git_blob_sha": "5525cc48e59c3a70adfe5c59ee596d49795ab9ca",
+      "git_blob_sha": "6e36d9f94c74049ec16e6345c430e7e16bcff83e",
       "inventory_id": "git:docs/rights/acat-corpus-v2.md",
       "kind": "file",
       "lifecycle": "active",
       "name": "acat-corpus-v2.md",
       "path": "docs/rights/acat-corpus-v2.md",
-      "sha256": "61070b8a6798d76c983d98a3053d0adbe39ad0facde91e1ed78d2d9dcf7d071f",
+      "sha256": "7978bce9b3d99666d4ea84a33ae942d4b83b141e51cd72045296e3e88fcaaed3",
       "source_system": "github"
     },
     {
