@@ -7,7 +7,7 @@ Research outputs from the HumanAIOS project — frozen-at-publication snapshots 
 **Structure:**
 
 - `papers/` — Each paper gets its own folder containing tex source, figures, and supplementary
-- `datasets/` — Frozen dataset snapshots, named by methodology version + time window (e.g. `acat_v5_3_2026Q1/`)
+- `datasets/` — Frozen dataset snapshots, named by methodology version + time window (e.g. `acat-corpus/v5-3-2026q1/`; see `CONTRIBUTING.md`)
 - `supplementary/` — Reusable across papers: scoring rubrics, replication code, perturbation library
 - `corrections/` — Public-facing corrections to published work, including per-paper errata
 
@@ -19,6 +19,8 @@ Research outputs from the HumanAIOS project — frozen-at-publication snapshots 
 - Code: Apache-2.0 (per-file headers)
 
 **Citation:** See `CITATION.cff` once first paper is migrated.
+
+**Publishing:** See `CONTRIBUTING.md` for naming, release tags, and the checks CI runs.
 
 **Project root:** [humanaios.ai](https://humanaios.ai)
 **Operations source of truth:** [humanaios-ui/operations](https://github.com/humanaios-ui/operations)
