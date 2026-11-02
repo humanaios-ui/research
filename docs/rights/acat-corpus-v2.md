@@ -9,7 +9,7 @@
 - 604 rows and 28 columns of ACAT scores: truth, service, harm, autonomy, value, humility, totals, learning index, and phase and pairing fields.
 - 64 rows have provider family `Human`. All 64 have the agent name `Anonymous`. Five more rows are `Anonymous` with no provider family.
 - The other 535 rows name an AI model, assistant or agent: OpenAI, Google, Anthropic, DeepSeek, Microsoft, Meta, xAI, Mistral and others. Some of these rows have a blank provider family.
-- Three rows use the agent name `FloridawestCity`, with no provider family. It is not a known model name, and this record cannot tell whether it is an agent label or a person's handle. **Open:** Z2 confirms which before release. If it is a person's handle, the release is a new version with those rows anonymized, not an edit of the frozen file.
+- Three rows use the agent name `FloridawestCity`, with no provider family. It is not a known model name. **Resolved:** Z2 (Night) confirmed on 2026-11-02 that it is an agent label, not a person's handle. No anonymization is needed.
 - The `raw_response` column is empty in every row. No model text and no free-text human answers are stored.
 - A scan found no email addresses and no URLs. The `metadata` column holds processing flags only.
 
